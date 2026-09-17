@@ -35,27 +35,32 @@ const els = {
   categoriesListContainer: document.getElementById('categories-list-container')
 };
 
+// Global FileSystem Directory Handles (Kept in Browser Memory)
+let sourceDirHandle = null;
+let baseDestDirHandle = null;
+const customCategoryHandles = {};
+
 // Default Settings State
 let settings = {
-  sourceDir: '',
-  baseDestDir: '',
+  sourceDirName: '',
+  baseDestDirName: '',
   autoRun: false,
   categories: [
     {
       id: 'install',
       name: 'Bộ Cài Đặt (Install)',
       folderName: 'Install',
-      extensions: ['exe', 'msi', 'dmg', 'pkg'],
+      extensions: ['exe', 'msi', 'dmg', 'pkg', 'apk', 'deb'],
       themeClass: 'cat-install',
-      customPath: ''
+      customPathName: ''
     },
     {
       id: 'pictures',
       name: 'Hình Ảnh (Pictures)',
       folderName: 'Pictures',
-      extensions: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp', 'tiff'],
+      extensions: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp', 'tiff', 'psd', 'ai'],
       themeClass: 'cat-picture',
-      customPath: ''
+      customPathName: ''
     },
     {
       id: 'media',
@@ -63,7 +68,7 @@ let settings = {
       folderName: 'Media',
       extensions: ['mp3', 'wav', 'mp4', 'mkv', 'avi', 'mov', 'flac', 'ogg', 'webm', 'm4a'],
       themeClass: 'cat-media',
-      customPath: ''
+      customPathName: ''
     },
     {
       id: 'documents',
@@ -71,15 +76,15 @@ let settings = {
       folderName: 'Documents',
       extensions: ['pdf', 'docx', 'xlsx', 'pptx', 'txt', 'csv', 'epub', 'doc', 'xls', 'ppt'],
       themeClass: 'cat-document',
-      customPath: ''
+      customPathName: ''
     },
     {
       id: 'archives',
       name: 'File Nén (Archives)',
       folderName: 'Archives',
-      extensions: ['zip', 'rar', '7z', 'tar', 'gz'],
+      extensions: ['zip', 'rar', '7z', 'tar', 'gz', 'iso'],
       themeClass: 'cat-archive',
-      customPath: ''
+      customPathName: ''
     },
     {
       id: 'markdown',
@@ -87,7 +92,7 @@ let settings = {
       folderName: 'Markdown',
       extensions: ['md', 'markdown'],
       themeClass: 'cat-document',
-      customPath: ''
+      customPathName: ''
     },
     {
       id: 'html_index',
@@ -95,7 +100,7 @@ let settings = {
       folderName: 'HTML/index',
       extensions: ['html', 'htm'],
       themeClass: 'cat-picture',
-      customPath: ''
+      customPathName: ''
     },
     {
       id: 'html_css',
@@ -103,15 +108,15 @@ let settings = {
       folderName: 'HTML/css',
       extensions: ['css'],
       themeClass: 'cat-picture',
-      customPath: ''
+      customPathName: ''
     },
     {
       id: 'html_json',
       name: 'JSON Data (Json)',
       folderName: 'HTML/json',
-      extensions: ['json', 'jsion'],
+      extensions: ['json'],
       themeClass: 'cat-picture',
-      customPath: ''
+      customPathName: ''
     },
     {
       id: 'python',
@@ -119,7 +124,7 @@ let settings = {
       folderName: 'Codes/Python',
       extensions: ['py', 'pyw', 'ipynb'],
       themeClass: 'cat-install',
-      customPath: ''
+      customPathName: ''
     },
     {
       id: 'cpp',
@@ -127,7 +132,7 @@ let settings = {
       folderName: 'Codes/C_CPP',
       extensions: ['cpp', 'hpp', 'c', 'h', 'cc', 'cxx'],
       themeClass: 'cat-media',
-      customPath: ''
+      customPathName: ''
     },
     {
       id: 'javascript',
@@ -135,7 +140,7 @@ let settings = {
       folderName: 'Codes/JS',
       extensions: ['js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx'],
       themeClass: 'cat-install',
-      customPath: ''
+      customPathName: ''
     },
     {
       id: 'others',
@@ -143,71 +148,92 @@ let settings = {
       folderName: 'Others',
       extensions: ['*'],
       themeClass: 'cat-other',
-      customPath: ''
+      customPathName: ''
     }
   ],
   history: []
 };
 
-// Initialize Application
+// Initialize Web Application
 async function init() {
-  // Load saved settings
-  const savedSettings = await window.api.loadSettings();
-  if (savedSettings) {
-    const originalCategoriesLength = (savedSettings.categories || []).length;
-    // Merge loaded settings with default structure to prevent missing fields
-    settings = {
-      ...settings,
-      ...savedSettings,
-      categories: settings.categories.map(cat => {
-        const savedCat = (savedSettings.categories || []).find(c => c.id === cat.id);
-        if (savedCat) {
-          const isOldDefaultFolder = 
-            (cat.id === 'python' && savedCat.folderName === 'Python') ||
-            (cat.id === 'cpp' && savedCat.folderName === 'C_CPP');
-          return {
-            ...cat,
-            ...savedCat,
-            folderName: (isOldDefaultFolder && !savedCat.customPath) ? cat.folderName : savedCat.folderName
-          };
-        }
-        return cat;
-      })
-    };
-    if (settings.categories.length !== originalCategoriesLength) {
-      await saveSettings();
-    }
-  } else {
-    // If no settings exist, fetch default downloads directory
-    const defaultDownloads = await window.api.getDefaultDownloadsDir();
-    settings.sourceDir = defaultDownloads;
-    settings.baseDestDir = `${defaultDownloads}/Organized`;
-    await saveSettings();
+  // Check File System Access API support
+  if (!('showDirectoryPicker' in window)) {
+    showBrowserSupportWarning();
   }
 
-  // Update inputs/views
+  // Load saved settings from localStorage
+  loadSavedSettings();
+
+  // Update DOM inputs and views
   updateInputs();
   renderCategories();
   renderHistory();
   updateStats();
   setupEventListeners();
 
-  // If auto-run is enabled, execute sorting on startup
-  if (settings.autoRun) {
-    runOrganizer();
+  // Request notification permission
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
   }
 }
 
-// Save settings to disk
-async function saveSettings() {
-  await window.api.saveSettings(settings);
+// Display warning if browser does not support directory picking
+function showBrowserSupportWarning() {
+  const warningBanner = document.createElement('div');
+  warningBanner.style.cssText = `
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  `;
+  warningBanner.innerHTML = `
+    <span>⚠️ <strong>Cảnh báo tương thích:</strong> Trình duyệt của bạn hiện chưa hỗ trợ <i>File System Access API</i>. Vui lòng sử dụng <strong>Google Chrome</strong>, <strong>Microsoft Edge</strong> hoặc <strong>Brave</strong> để sử dụng tính năng chọn thư mục trên máy tính!</span>
+  `;
+  const mainContent = document.querySelector('.main-content');
+  if (mainContent) {
+    mainContent.insertBefore(warningBanner, mainContent.children[1]);
+  }
 }
 
-// Update settings inputs in DOM
+// Load settings from localStorage
+function loadSavedSettings() {
+  try {
+    const raw = localStorage.getItem('sorter_web_settings');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      settings = {
+        ...settings,
+        ...parsed,
+        categories: settings.categories.map(cat => {
+          const savedCat = (parsed.categories || []).find(c => c.id === cat.id);
+          return savedCat ? { ...cat, ...savedCat } : cat;
+        })
+      };
+    }
+  } catch (e) {
+    console.error('Failed to parse saved settings from localStorage:', e);
+  }
+}
+
+// Save settings to localStorage
+function saveSettings() {
+  try {
+    localStorage.setItem('sorter_web_settings', JSON.stringify(settings));
+  } catch (e) {
+    console.error('Failed to save settings to localStorage:', e);
+  }
+}
+
+// Update directory inputs in DOM
 function updateInputs() {
-  els.inputSourceDir.value = settings.sourceDir;
-  els.inputDestDir.value = settings.baseDestDir;
-  els.toggleAutoRun.checked = settings.autoRun;
+  els.inputSourceDir.value = sourceDirHandle ? `📂 ${sourceDirHandle.name}` : (settings.sourceDirName ? `📂 ${settings.sourceDirName} (Cần chọn lại)` : '');
+  els.inputDestDir.value = baseDestDirHandle ? `📂 ${baseDestDirHandle.name}` : (settings.baseDestDirName ? `📂 ${settings.baseDestDirName}` : 'Mặc định: Thư mục con "Organized"');
 }
 
 // Update stats panel
@@ -226,22 +252,20 @@ function setupEventListeners() {
   // Navigation Menu Toggling
   const navItems = [els.menuDash, els.menuRules, els.menuLogs];
   navItems.forEach(item => {
-    item.addEventListener('click', (e) => {
+    item.addEventListener('click', () => {
       navItems.forEach(nav => nav.classList.remove('active'));
       item.classList.add('active');
       
       const targetPage = item.getAttribute('data-page');
       
-      // Toggle visibility
       document.querySelectorAll('.page-view').forEach(page => {
         page.classList.remove('active');
       });
       document.getElementById(targetPage).classList.add('active');
       
-      // Update header titles
       if (targetPage === 'page-dashboard') {
         els.appTitleDisplay.innerText = 'Trang Chủ';
-        els.appSubtitleDisplay.innerText = 'Quản lý và tự động sắp xếp tập tin nhanh chóng';
+        els.appSubtitleDisplay.innerText = 'Quản lý và tự động sắp xếp tập tin nhanh chóng trên Web';
       } else if (targetPage === 'page-categories') {
         els.appTitleDisplay.innerText = 'Cấu Hình Quy Tắc';
         els.appSubtitleDisplay.innerText = 'Thiết lập định dạng tập tin và vị trí lưu trữ';
@@ -252,34 +276,44 @@ function setupEventListeners() {
     });
   });
 
-  // Source Folder Selector
+  // Source Folder Selector (Web Directory Picker)
   els.btnBrowseSource.addEventListener('click', async () => {
-    const selected = await window.api.selectDirectory(settings.sourceDir);
-    if (selected) {
-      settings.sourceDir = selected;
-      // Automatically adjust organized default folder if it is in the old folder
-      if (settings.baseDestDir.includes('Organized')) {
-        settings.baseDestDir = `${selected}/Organized`;
-      }
+    if (!('showDirectoryPicker' in window)) {
+      alert('Trình duyệt của bạn không hỗ trợ chọn thư mục. Vui lòng mở trang này trên Google Chrome, Edge hoặc Brave.');
+      return;
+    }
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      sourceDirHandle = handle;
+      settings.sourceDirName = handle.name;
       updateInputs();
-      await saveSettings();
+      saveSettings();
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error(err);
+        alert(`Không thể truy cập thư mục: ${err.message}`);
+      }
     }
   });
 
   // Destination Folder Selector
   els.btnBrowseDest.addEventListener('click', async () => {
-    const selected = await window.api.selectDirectory(settings.baseDestDir || settings.sourceDir);
-    if (selected) {
-      settings.baseDestDir = selected;
-      updateInputs();
-      await saveSettings();
+    if (!('showDirectoryPicker' in window)) {
+      alert('Trình duyệt của bạn không hỗ trợ chọn thư mục. Vui lòng mở trang này trên Google Chrome, Edge hoặc Brave.');
+      return;
     }
-  });
-
-  // Auto Run Toggle Change
-  els.toggleAutoRun.addEventListener('change', async (e) => {
-    settings.autoRun = e.target.checked;
-    await saveSettings();
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      baseDestDirHandle = handle;
+      settings.baseDestDirName = handle.name;
+      updateInputs();
+      saveSettings();
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error(err);
+        alert(`Không thể truy cập thư mục: ${err.message}`);
+      }
+    }
   });
 
   // Run Organizer Button Click
@@ -293,21 +327,20 @@ function setupEventListeners() {
 }
 
 // Clear all execution logs
-async function clearHistoryLogs() {
+function clearHistoryLogs() {
   if (confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử phân loại đã ghi lại trong ứng dụng không?')) {
     settings.history = [];
-    await saveSettings();
+    saveSettings();
     renderHistory();
     updateStats();
   }
 }
 
 // Add extension to category
-async function addExtension(catId, inputEl) {
+function addExtension(catId, inputEl) {
   const rawExt = inputEl.value.trim().toLowerCase();
   if (!rawExt) return;
   
-  // Clean dots
   const ext = rawExt.startsWith('.') ? rawExt.substring(1) : rawExt;
   if (!ext) return;
 
@@ -315,7 +348,7 @@ async function addExtension(catId, inputEl) {
   if (category) {
     if (!category.extensions.includes(ext)) {
       category.extensions.push(ext);
-      await saveSettings();
+      saveSettings();
       renderCategories();
       inputEl.value = '';
     } else {
@@ -325,36 +358,44 @@ async function addExtension(catId, inputEl) {
 }
 
 // Remove extension from category
-async function removeExtension(catId, ext) {
+function removeExtension(catId, ext) {
   const category = settings.categories.find(c => c.id === catId);
   if (category) {
     category.extensions = category.extensions.filter(e => e !== ext);
-    await saveSettings();
+    saveSettings();
     renderCategories();
   }
 }
 
-// Change custom destination path for specific category
+// Choose custom destination directory for specific category
 async function chooseCustomCategoryPath(catId) {
+  if (!('showDirectoryPicker' in window)) {
+    alert('Trình duyệt của bạn không hỗ trợ tính năng này. Vui lòng dùng Chrome / Edge / Brave.');
+    return;
+  }
   const category = settings.categories.find(c => c.id === catId);
   if (!category) return;
 
-  const defaultDir = category.customPath || settings.baseDestDir || settings.sourceDir;
-  const selected = await window.api.selectDirectory(defaultDir);
-  
-  if (selected) {
-    category.customPath = selected;
-    await saveSettings();
+  try {
+    const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    customCategoryHandles[catId] = handle;
+    category.customPathName = handle.name;
+    saveSettings();
     renderCategories();
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error(err);
+    }
   }
 }
 
-// Reset category destination to default
-async function resetCategoryPath(catId) {
+// Reset category custom path
+function resetCategoryPath(catId) {
   const category = settings.categories.find(c => c.id === catId);
   if (category) {
-    category.customPath = '';
-    await saveSettings();
+    category.customPathName = '';
+    delete customCategoryHandles[catId];
+    saveSettings();
     renderCategories();
   }
 }
@@ -367,11 +408,19 @@ function renderCategories() {
     const card = document.createElement('div');
     card.className = 'glass-panel category-card';
     
-    // Determine current path display
-    const currentPath = cat.customPath || `${settings.baseDestDir || settings.sourceDir}/${cat.folderName}`;
-    const isCustom = !!cat.customPath;
+    let pathDisplay = '';
+    if (cat.customPathName) {
+      pathDisplay = `📂 Custom: ${cat.customPathName}`;
+    } else if (baseDestDirHandle) {
+      pathDisplay = `📂 ${baseDestDirHandle.name}/${cat.folderName}`;
+    } else if (sourceDirHandle) {
+      pathDisplay = `📂 ${sourceDirHandle.name}/Organized/${cat.folderName}`;
+    } else {
+      pathDisplay = `📂 [Mặc định] Organized/${cat.folderName}`;
+    }
+
+    const isCustom = !!cat.customPathName;
     
-    // Create badges HTML
     const badgesHtml = cat.extensions.map(ext => `
       <span class="ext-badge">
         .${ext}
@@ -390,8 +439,8 @@ function renderCategories() {
         ` : ''}
       </div>
       
-      <div class="category-path-label" id="path-lbl-${cat.id}" title="Click để đổi thư mục: ${currentPath}">
-        📂 ${currentPath}
+      <div class="category-path-label" id="path-lbl-${cat.id}" title="Nhấp để chọn thư mục riêng cho mục này: ${pathDisplay}">
+        ${pathDisplay}
       </div>
 
       <div class="extensions-header">Định dạng file liên kết:</div>
@@ -413,20 +462,17 @@ function renderCategories() {
 
     els.categoriesListContainer.appendChild(card);
 
-    // Event listener for custom folder selection
     document.getElementById(`path-lbl-${cat.id}`).addEventListener('click', () => {
       chooseCustomCategoryPath(cat.id);
     });
 
-    // Event listener for reset custom path
     if (isCustom) {
       document.getElementById(`reset-path-${cat.id}`).addEventListener('click', (e) => {
-        e.stopPropagation(); // Avoid triggering path label selection click
+        e.stopPropagation();
         resetCategoryPath(cat.id);
       });
     }
 
-    // Add extension listeners
     if (cat.id !== 'others') {
       const input = document.getElementById(`ext-input-${cat.id}`);
       const btn = document.getElementById(`ext-btn-${cat.id}`);
@@ -438,9 +484,8 @@ function renderCategories() {
     }
   });
 
-  // Remove extension listeners delegation
   document.querySelectorAll('.ext-badge-remove').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', () => {
       const catId = btn.getAttribute('data-cat');
       const ext = btn.getAttribute('data-ext');
       removeExtension(catId, ext);
@@ -448,7 +493,7 @@ function renderCategories() {
   });
 }
 
-// Render operations history logs
+// Render execution logs
 function renderHistory() {
   const generateHistoryHTML = (items) => {
     if (items.length === 0) {
@@ -464,13 +509,10 @@ function renderHistory() {
       const isOK = item.status === 'OK';
       const extIcon = item.ext ? item.ext.replace('.', '').toUpperCase() : '?';
       
-      // Determine category theme class
       let themeClass = 'cat-other';
       if (isOK) {
         const foundCat = settings.categories.find(cat => cat.extensions.includes(item.ext.replace('.', '')));
         if (foundCat) themeClass = foundCat.themeClass;
-      } else {
-        themeClass = 'cat-other';
       }
 
       return `
@@ -480,13 +522,13 @@ function renderHistory() {
             <div style="overflow: hidden;">
               <div class="activity-file-name" title="${item.name}">${item.name}</div>
               <div class="activity-file-paths" title="${isOK ? `${item.from} → ${item.to}` : item.from}">
-                ${isOK ? `Từ: ...\\${item.name} ➔ ${item.to}` : `Lỗi di chuyển: ${item.from}`}
+                ${isOK ? `Từ: ${item.from} ➔ ${item.to}` : `Lỗi: ${item.error || 'Thất bại'}`}
               </div>
             </div>
           </div>
           <div>
             <span class="activity-badge ${isOK ? 'activity-badge-success' : 'activity-badge-error'}">
-              ${isOK ? 'Hoàn tất' : `Lỗi: ${item.error || 'Thất bại'}`}
+              ${isOK ? 'Hoàn tất' : 'Lỗi'}
             </span>
           </div>
         </div>
@@ -494,96 +536,183 @@ function renderHistory() {
     }).join('');
   };
 
-  // Populate dashboard list (limited to 5 items for clean display)
   const dashboardItems = [...settings.history].reverse().slice(0, 5);
   els.dashActivityList.innerHTML = generateHistoryHTML(dashboardItems);
 
-  // Populate full logs list
   const fullItems = [...settings.history].reverse();
   els.fullActivityList.innerHTML = generateHistoryHTML(fullItems);
 }
 
-// Run sorting engine
+// Helper: Ensure subdirectories exist recursively for nested folder names (e.g. "HTML/index")
+async function getNestedDirectoryHandle(parentHandle, folderPath) {
+  const parts = folderPath.split('/').filter(p => p.length > 0);
+  let currentHandle = parentHandle;
+  for (const part of parts) {
+    currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
+  }
+  return currentHandle;
+}
+
+// Core Web File System Access Organizer Engine
 async function runOrganizer() {
   if (els.btnRunOrganizer.classList.contains('running')) return;
 
-  // Change UI to running state
+  // Prompt user if source directory handle is not set
+  if (!sourceDirHandle) {
+    alert('Vui lòng bấm vào nút "Chọn..." tại Thư mục nguồn để cấp quyền chọn thư mục trên máy bạn!');
+    try {
+      sourceDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      settings.sourceDirName = sourceDirHandle.name;
+      updateInputs();
+      saveSettings();
+    } catch (err) {
+      return;
+    }
+  }
+
+  // Request & verify readwrite permissions
+  try {
+    const opts = { mode: 'readwrite' };
+    if ((await sourceDirHandle.queryPermission(opts)) !== 'granted') {
+      if ((await sourceDirHandle.requestPermission(opts)) !== 'granted') {
+        alert('Cần cấp quyền đọc/ghi để tiến hành phân loại các tệp tin trong thư mục!');
+        return;
+      }
+    }
+  } catch (permErr) {
+    console.error('Permission check failed:', permErr);
+  }
+
+  // Update UI to running state
   els.btnRunOrganizer.classList.add('running');
   els.btnRunOrganizer.querySelector('span').innerText = 'ĐANG CHẠY';
-  els.runStatusDesc.innerText = 'Đang di chuyển tệp tin...';
+  els.runStatusDesc.innerText = 'Đang quét & di chuyển tệp tin...';
   els.statusDot.className = 'status-indicator status-running';
   els.statusText.innerText = 'Đang xử lý';
   els.dashboardOverlay.classList.add('active');
 
+  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const newLogs = [];
+  let movedCount = 0;
+  let errorCount = 0;
+
   try {
-    // Call backend API
-    const response = await window.api.runOrganizer({
-      sourceDir: settings.sourceDir,
-      baseDestDir: settings.baseDestDir,
-      categories: settings.categories
-    });
+    const tempExts = ['.crdownload', '.tmp', '.part', '.download', '.lock'];
 
-    if (response.success) {
-      const timestamp = new Date().toLocaleString();
-      
-      // Parse backend output
-      const newLogs = [];
-      
-      // Add success items
-      response.movedFiles.forEach(file => {
-        newLogs.push({
-          status: 'OK',
-          name: file.name,
-          from: file.from,
-          to: file.to,
-          ext: file.ext,
-          time: timestamp
-        });
-      });
+    // Iterate through files in source directory
+    for await (const entry of sourceDirHandle.values()) {
+      if (entry.kind !== 'file') continue; // Skip folders
 
-      // Add error items
-      response.errors.forEach(err => {
-        newLogs.push({
-          status: 'ERROR',
-          name: err.file.split(/[\\/]/).pop(),
-          from: err.file,
-          error: err.message,
-          time: timestamp
-        });
-      });
+      const fileName = entry.name;
+      const lastDotIndex = fileName.lastIndexOf('.');
+      const extWithDot = lastDotIndex !== -1 ? fileName.substring(lastDotIndex).toLowerCase() : '';
+      const cleanExt = extWithDot.startsWith('.') ? extWithDot.substring(1) : extWithDot;
 
-      // Update history in state
-      if (newLogs.length > 0) {
-        settings.history = [...settings.history, ...newLogs];
-        await saveSettings();
-        
-        // Show desktop notification if files were organized
-        if (response.summary.moved > 0) {
-          new Notification('Đã sắp xếp tệp tin thành công!', {
-            body: `Đã di chuyển ${response.summary.moved} tệp tin vào các thư mục phân loại.`
-          });
-        }
-      } else {
-        new Notification('Đã quét xong!', {
-          body: `Không phát hiện tệp tin mới nào cần phân loại.`
-        });
+      // Skip temporary download files
+      if (tempExts.includes(extWithDot)) continue;
+
+      // Match category based on extensions
+      let matchedCat = settings.categories.find(c => c.extensions.includes(cleanExt));
+      if (!matchedCat) {
+        matchedCat = settings.categories.find(c => c.extensions.includes('*') || c.id === 'others');
       }
 
-      // Update tables & stats
-      renderHistory();
-      updateStats();
+      if (!matchedCat) continue;
 
-      els.runStatusDesc.innerText = `Hoàn tất! Đã di chuyển ${response.summary.moved} tệp, lỗi ${response.summary.errors} tệp.`;
-    } else {
-      alert(`Đã xảy ra lỗi khi khởi chạy công cụ phân loại C++:\n${response.error}`);
-      els.runStatusDesc.innerText = 'Gặp lỗi trong quá trình quét.';
+      // Determine target root directory handle
+      let targetRootHandle = null;
+      if (customCategoryHandles[matchedCat.id]) {
+        targetRootHandle = customCategoryHandles[matchedCat.id];
+      } else if (baseDestDirHandle) {
+        targetRootHandle = baseDestDirHandle;
+      } else {
+        targetRootHandle = await sourceDirHandle.getDirectoryHandle('Organized', { create: true });
+      }
+
+      // Get target subfolder handle
+      let destFolderHandle = null;
+      if (customCategoryHandles[matchedCat.id]) {
+        destFolderHandle = targetRootHandle;
+      } else {
+        destFolderHandle = await getNestedDirectoryHandle(targetRootHandle, matchedCat.folderName);
+      }
+
+      // Handle duplicate file names in destination
+      let finalFileName = fileName;
+      let counter = 1;
+      const nameStem = lastDotIndex !== -1 ? fileName.substring(0, lastDotIndex) : fileName;
+
+      while (true) {
+        try {
+          await destFolderHandle.getFileHandle(finalFileName);
+          // File exists -> generate unique name
+          finalFileName = `${nameStem} (${counter})${extWithDot}`;
+          counter++;
+        } catch (e) {
+          // File does not exist -> safe to write
+          break;
+        }
+      }
+
+      // Execute file move
+      try {
+        if ('move' in entry && typeof entry.move === 'function') {
+          await entry.move(destFolderHandle, finalFileName);
+        } else {
+          // Stream Copy + Remove fallback
+          const fileData = await entry.getFile();
+          const targetFileHandle = await destFolderHandle.getFileHandle(finalFileName, { create: true });
+          const writableStream = await targetFileHandle.createWritable();
+          await writableStream.write(fileData);
+          await writableStream.close();
+          await sourceDirHandle.removeEntry(fileName);
+        }
+
+        newLogs.push({
+          status: 'OK',
+          name: finalFileName,
+          from: `${sourceDirHandle.name}/${fileName}`,
+          to: `${destFolderHandle.name}/${finalFileName}`,
+          ext: extWithDot,
+          time: timestamp
+        });
+        movedCount++;
+      } catch (moveErr) {
+        console.error(`Error moving ${fileName}:`, moveErr);
+        newLogs.push({
+          status: 'ERROR',
+          name: fileName,
+          from: `${sourceDirHandle.name}/${fileName}`,
+          error: moveErr.message || 'Không thể di chuyển file',
+          time: timestamp
+        });
+        errorCount++;
+      }
     }
+
+    // Save and update UI
+    if (newLogs.length > 0) {
+      settings.history = [...settings.history, ...newLogs];
+      saveSettings();
+
+      if ('Notification' in window && Notification.permission === 'granted') {
+        if (movedCount > 0) {
+          new Notification('Sắp xếp hoàn tất!', {
+            body: `Đã di chuyển thành công ${movedCount} tệp tin.`
+          });
+        }
+      }
+    }
+
+    renderHistory();
+    updateStats();
+
+    els.runStatusDesc.innerText = `Hoàn tất! Đã di chuyển ${movedCount} tệp, lỗi ${errorCount} tệp.`;
   } catch (err) {
-    console.error(err);
-    alert(`Lỗi hệ thống: ${err.message}`);
-    els.runStatusDesc.innerText = 'Lỗi hệ thống.';
+    console.error('Organizer execution error:', err);
+    alert(`Lỗi khi xử lý phân loại: ${err.message}`);
+    els.runStatusDesc.innerText = 'Gặp lỗi trong quá trình quét.';
   } finally {
-    // Reset UI state after 2 seconds to let the user read results
     setTimeout(() => {
       els.btnRunOrganizer.classList.remove('running');
       els.btnRunOrganizer.querySelector('span').innerText = 'BẮT ĐẦU';
@@ -595,5 +724,5 @@ async function runOrganizer() {
   }
 }
 
-// Start app
+// Start Web application
 document.addEventListener('DOMContentLoaded', init);
