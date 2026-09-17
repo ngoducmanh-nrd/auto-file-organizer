@@ -1,0 +1,9 @@
+﻿node_modules/
+bin/*.exe
+dist/
+build/
+.vscode/
+.idea/
+organizer_config.txt
+organizer_results.txt
+*.log
