@@ -1,4 +1,4 @@
-﻿node_modules/
+node_modules/
 bin/*.exe
 dist/
 build/
@@ -7,3 +7,5 @@ build/
 organizer_config.txt
 organizer_results.txt
 *.log
+*.zip
+.agents/
