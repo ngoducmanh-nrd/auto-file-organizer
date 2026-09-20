@@ -1,5 +1,3 @@
-// js/toast.js
-
 let container = null;
 
 function ensureContainer() {
@@ -47,7 +45,6 @@ export function toast(message, { type = 'info', duration = 3200, title = '' } = 
     return dismiss;
 }
 
-// Shortcuts
 export const toastSuccess = (msg, opts) => toast(msg, { ...opts, type: 'success' });
 export const toastError = (msg, opts) => toast(msg, { ...opts, type: 'error' });
 export const toastInfo = (msg, opts) => toast(msg, { ...opts, type: 'info' });

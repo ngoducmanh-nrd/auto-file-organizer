@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  /* Clean SaaS Dark Palette (WCAG AA/AAA compliant) */
+
   --bg-app: #090d16;
   --bg-sidebar: #0d121f;
   --bg-card: #111827;
@@ -12,13 +12,11 @@
   --border-focus: #38bdf8;
   --border-hover: #374151;
 
-  /* Typography Colors */
   --text-main: #f9fafb;
   --text-secondary: #d1d5db;
   --text-muted: #9ca3af;
   --text-subtle: #6b7280;
 
-  /* Brand & Accents */
   --primary: #38bdf8;
   --primary-hover: #0ea5e9;
   --primary-surface: rgba(56, 189, 248, 0.1);
@@ -41,7 +39,6 @@
   --accent-cyan: #06b6d4;
   --accent-cyan-surface: rgba(6, 182, 212, 0.12);
 
-  /* Legacy variable alias mappings */
   --bg-color: var(--bg-app);
   --panel-bg: var(--bg-card);
   --panel-bg-hover: var(--bg-card-hover);
@@ -49,7 +46,6 @@
   --panel-border-focus: var(--border-focus);
   --text-dark: var(--text-subtle);
 
-  /* Radii */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -66,7 +62,6 @@
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Reset & Baseline */
 *,
 *::before,
 *::after {
@@ -86,7 +81,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Accessible Focus States */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible {
@@ -94,7 +88,6 @@ input:focus-visible {
   outline-offset: 2px;
 }
 
-/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -113,7 +106,6 @@ input:focus-visible {
   background: #374151;
 }
 
-/* Main Layout Structure */
 .app-container {
   display: flex;
   height: 100vh;
@@ -123,7 +115,6 @@ input:focus-visible {
   position: relative;
 }
 
-/* Sidebar */
 .sidebar {
   width: 260px;
   background: var(--bg-sidebar);
@@ -184,7 +175,6 @@ input:focus-visible {
   letter-spacing: 0.05em;
 }
 
-/* Navigation */
 .menu-list {
   list-style: none;
   display: flex;
@@ -251,7 +241,6 @@ input:focus-visible {
   margin-top: 2px;
 }
 
-/* Main Content Area */
 .main-content {
   flex: 1;
   display: flex;
@@ -261,7 +250,6 @@ input:focus-visible {
   background: var(--bg-app);
 }
 
-/* Header */
 .header {
   height: 72px;
   border-bottom: 1px solid var(--border-subtle);
@@ -319,7 +307,48 @@ input:focus-visible {
   gap: 16px;
 }
 
-/* Status Indicator Pill */
+.btn-download-exe {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-surface);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.btn-download-exe:hover {
+  background: var(--primary);
+  color: #090d16;
+  border-color: var(--primary);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-download-exe:active {
+  transform: translateY(0);
+}
+
+.btn-download-exe svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  fill: none;
+  transition: transform var(--transition-fast);
+}
+
+.btn-download-exe:hover svg {
+  transform: translateY(1px);
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -369,7 +398,6 @@ input:focus-visible {
   }
 }
 
-/* Page Views */
 .page-view {
   display: none;
   padding: 32px;
@@ -396,7 +424,6 @@ input:focus-visible {
   }
 }
 
-/* SaaS Card & Panels */
 .panel,
 .glass-panel {
   background: var(--bg-card);
@@ -439,7 +466,6 @@ input:focus-visible {
   flex-shrink: 0;
 }
 
-/* Stats Cards Grid */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -555,7 +581,6 @@ input:focus-visible {
   fill: none;
 }
 
-/* Dashboard Middle Grid */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -563,7 +588,6 @@ input:focus-visible {
   margin-bottom: 24px;
 }
 
-/* Form Groups & Inputs */
 .form-group {
   margin-bottom: 18px;
 }
@@ -607,7 +631,6 @@ input:focus-visible {
   color: var(--text-secondary);
 }
 
-/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -670,7 +693,6 @@ input:focus-visible {
   color: #fff;
 }
 
-/* Action Run Panel */
 .run-panel {
   display: flex;
   flex-direction: column;
@@ -759,7 +781,6 @@ input:focus-visible {
   margin-top: 14px;
 }
 
-/* Running Overlay */
 .running-overlay {
   position: absolute;
   inset: 0;
@@ -799,7 +820,6 @@ input:focus-visible {
   color: var(--text-main);
 }
 
-/* Activity History Logs List */
 .activity-list {
   display: flex;
   flex-direction: column;
@@ -894,7 +914,6 @@ input:focus-visible {
   border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
-/* Empty State */
 .empty-state {
   text-align: center;
   padding: 40px 20px;
@@ -918,7 +937,6 @@ input:focus-visible {
   max-width: 320px;
 }
 
-/* Category Rules Page & Cards */
 .rules-toolbar {
   display: flex;
   align-items: center;
@@ -997,20 +1015,37 @@ input:focus-visible {
   font-size: 0.78rem;
   color: var(--primary);
   background: var(--primary-surface);
-  border: 1px dashed rgba(56, 189, 248, 0.3);
+  border: 1px solid rgba(56, 189, 248, 0.25);
   padding: 8px 12px;
   border-radius: var(--radius-md);
   margin-bottom: 16px;
-  cursor: pointer;
+  cursor: default;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: all var(--transition-fast);
 }
 
-.category-path-label:hover {
-  border-color: var(--primary);
-  background: rgba(56, 189, 248, 0.16);
+.badge-readonly {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  letter-spacing: 0.02em;
+}
+
+.category-card-footer {
+  margin-top: auto;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.06);
 }
 
 .extensions-header {
@@ -1082,7 +1117,6 @@ input:focus-visible {
   border-color: var(--border-focus);
 }
 
-/* Category Color Accents */
 .cat-install {
   background: var(--accent-green-surface);
   color: var(--accent-green);
@@ -1119,7 +1153,6 @@ input:focus-visible {
   border: 1px solid rgba(107, 114, 128, 0.3);
 }
 
-/* Responsive Media Queries */
 @media (max-width: 1024px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -1168,10 +1201,18 @@ input:focus-visible {
   .search-box-wrapper {
     max-width: 100%;
   }
+
+  .header-actions {
+    gap: 10px;
+  }
+
+  .btn-download-exe {
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    gap: 6px;
+  }
 }
 
-
-/* ============ Toast Notifications ============ */
 .toast-container {
   position: fixed;
   top: 20px;
@@ -1297,7 +1338,6 @@ input:focus-visible {
   }
 }
 
-/* ============ Modal ============ */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1359,11 +1399,6 @@ input:focus-visible {
   justify-content: flex-end;
 }
 
-/* ==========================================================================
-   SPRINT 2 & 3 COMPONENTS (Polished & Unified SaaS Design)
-   ========================================================================== */
-
-/* ------------ Progress Bar ------------ */
 .run-progress {
   width: 100%;
   max-width: 280px;
@@ -1401,7 +1436,6 @@ input:focus-visible {
   letter-spacing: 0.4px;
 }
 
-/* ------------ Action Buttons (Abort & Undo) ------------ */
 .btn-abort {
   margin-top: 12px;
   background: var(--accent-red-surface);
@@ -1462,7 +1496,6 @@ input:focus-visible {
   filter: grayscale(0.5);
 }
 
-/* ------------ Preview Modal Dialog ------------ */
 .modal-lg {
   max-width: 740px;
   width: 92vw;
@@ -1562,7 +1595,6 @@ input:focus-visible {
   border-top: 1px dashed var(--border-subtle);
 }
 
-/* ------------ Modern Toggle Switch ------------ */
 .toggle-switch {
   position: relative;
   display: inline-block;
@@ -1626,7 +1658,6 @@ input:focus-visible {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
-/* ------------ Small Action Buttons & Icons ------------ */
 .btn-icon {
   background: var(--bg-input);
   border: 1px solid var(--border-subtle);
@@ -1662,7 +1693,6 @@ input:focus-visible {
   background: var(--primary-surface);
 }
 
-/* ------------ Category Indicator Dot ------------ */
 .category-title-icon {
   position: relative;
 }
@@ -1692,7 +1722,6 @@ input:focus-visible {
   }
 }
 
-/* ------------ Form Inputs & Code Tag Polish ------------ */
 textarea.text-input {
   resize: vertical;
   min-height: 85px;
@@ -1711,7 +1740,6 @@ textarea.text-input {
   border: 1px solid rgba(56, 189, 248, 0.2);
 }
 
-/* ------------ Modal Form Controls (Advanced Rules) ------------ */
 .modal .form-group {
   margin-bottom: 16px;
 }

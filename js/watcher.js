@@ -1,16 +1,8 @@
-
-// js/watcher.js
-
 let observer = null;
 let pollTimer = null;
 let watching = false;
 let startTime = 0;
 
-/**
- * @param {FileSystemDirectoryHandle} dir
- * @param {(name: string) => void} onNewFile
- * @returns {Promise<{mode: 'observer'|'polling'}>}
- */
 export async function startWatching(dir, onNewFile) {
     if (watching) return { mode: observer ? 'observer' : 'polling' };
     watching = true;
@@ -33,7 +25,6 @@ export async function startWatching(dir, onNewFile) {
         }
     }
 
-    // Fallback polling
     const seen = new Set();
     for await (const e of dir.values()) if (e.kind === 'file') seen.add(e.name);
 
@@ -43,7 +34,7 @@ export async function startWatching(dir, onNewFile) {
                 if (e.kind !== 'file') continue;
                 if (!seen.has(e.name)) {
                     seen.add(e.name);
-                    // Bỏ qua tệp xuất hiện trong 2s đầu (tránh dội khi vừa bật)
+
                     if (Date.now() - startTime > 2000) onNewFile(e.name);
                 }
             }

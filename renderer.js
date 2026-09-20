@@ -1,4 +1,3 @@
-// renderer.js — đầu file
 import {
   debounce, parseExtension, uniqueFileName,
   getNestedDirectoryHandle, escapeHtml, formatTime, uid,
@@ -20,7 +19,6 @@ import {
 import { toast, toastSuccess, toastError, toastInfo, toastWarning } from './js/toast.js';
 import { confirmDialog, promptDialog, previewDialog, advancedRulesDialog } from './js/modal.js';
 
-// Elements cache
 const els = {
   menuDash: document.getElementById('menu-dash'),
   menuRules: document.getElementById('menu-rules'),
@@ -28,31 +26,31 @@ const els = {
   pageDashboard: document.getElementById('page-dashboard'),
   pageCategories: document.getElementById('page-categories'),
   pageLogs: document.getElementById('page-logs'),
-  
+
   appTitleDisplay: document.getElementById('app-title-display'),
   appSubtitleDisplay: document.getElementById('app-subtitle-display'),
-  
+
   inputSourceDir: document.getElementById('input-source-dir'),
   inputDestDir: document.getElementById('input-dest-dir'),
   btnBrowseSource: document.getElementById('btn-browse-source'),
   btnBrowseDest: document.getElementById('btn-browse-dest'),
-  
+
   btnRunOrganizer: document.getElementById('btn-run-organizer'),
   runStatusDesc: document.getElementById('run-status-desc'),
   statusDot: document.getElementById('status-dot'),
   statusText: document.getElementById('status-text'),
   dashboardOverlay: document.getElementById('dashboard-overlay'),
-  
+
   statMoved: document.getElementById('stat-moved'),
   statErrors: document.getElementById('stat-errors'),
   statRulesCount: document.getElementById('stat-rules-count'),
-  
+
   dashActivityList: document.getElementById('dash-activity-list'),
   fullActivityList: document.getElementById('full-activity-list'),
-  
+
   btnClearDashLogs: document.getElementById('btn-clear-dash-logs'),
   btnClearAllLogs: document.getElementById('btn-clear-all-logs'),
-  
+
   categoriesListContainer: document.getElementById('categories-list-container'),
   inputSearchCategories: document.getElementById('input-search-categories'),
   btnMobileMenu: document.getElementById('btn-mobile-menu'),
@@ -68,12 +66,10 @@ const els = {
 
 let currentAbort = null;
 
-// Global FileSystem Directory Handles (Kept in Browser Memory)
 let sourceDirHandle = null;
 let baseDestDirHandle = null;
 const customCategoryHandles = {};
 
-// Default Settings State
 let settings = {
   sourceDirName: '',
   baseDestDirName: '',
@@ -189,22 +185,19 @@ let settings = {
   history: []
 };
 
-// Initialize Web Application
 async function init() {
   if (!('showDirectoryPicker' in window)) showBrowserSupportWarning();
 
-  // Load settings
   settings = loadSettings(settings);
 
-  // === RESTORE HANDLES TỪ INDEXEDDB ===
   try {
     const savedSource = await loadHandle('source');
     if (savedSource) {
       sourceDirHandle = savedSource;
-      // queryPermission không cần user gesture
+
       const perm = await savedSource.queryPermission({ mode: 'readwrite' });
       if (perm !== 'granted') {
-        // Đánh dấu cần xin lại quyền (không auto request vì cần user gesture)
+
         settings._needsReauth = true;
         toastInfo(`Đã khôi phục thư mục "${savedSource.name}". Nhấn BẮT ĐẦU để cấp lại quyền.`);
       }
@@ -222,7 +215,6 @@ async function init() {
     console.warn('Restore handles failed:', e);
   }
 
-  // Khôi phục Watch nếu đã bật trước đó
   if (settings.watchEnabled && sourceDirHandle) {
     try {
       const perm = await sourceDirHandle.queryPermission({ mode: 'readwrite' });
@@ -250,7 +242,6 @@ async function init() {
   }
 }
 
-// Display warning if browser does not support directory picking
 function showBrowserSupportWarning() {
   const warningBanner = document.createElement('div');
   warningBanner.style.cssText = `
@@ -274,7 +265,6 @@ function showBrowserSupportWarning() {
   }
 }
 
-// Update directory inputs in DOM
 function updateInputs() {
   els.inputSourceDir.value = sourceDirHandle
     ? `📂 ${sourceDirHandle.name}`
@@ -291,9 +281,8 @@ function updateInputs() {
   }
 }
 
-// Update stats panel
 async function updateStats() {
-  // Đếm OK / ERROR từ IDB thay vì filter mảng trong RAM
+
   const all = await getHistory({ order: 'desc' });
   const totalMoved = all.filter(i => i.status === 'OK').length;
   const totalErrors = all.filter(i => i.status === 'ERROR').length;
@@ -312,22 +301,21 @@ function onWatchNewFile(fileName) {
   }, 1500);
 }
 
-// Event Listeners setup
 function setupEventListeners() {
-  // Navigation Menu Toggling
+
   const navItems = [els.menuDash, els.menuRules, els.menuLogs];
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       navItems.forEach(nav => nav.classList.remove('active'));
       item.classList.add('active');
-      
+
       const targetPage = item.getAttribute('data-page');
-      
+
       document.querySelectorAll('.page-view').forEach(page => {
         page.classList.remove('active');
       });
       document.getElementById(targetPage).classList.add('active');
-      
+
       if (targetPage === 'page-dashboard') {
         els.appTitleDisplay.innerText = 'Tổng Quan';
         els.appSubtitleDisplay.innerText = 'Quản lý và tự động sắp xếp tập tin nhanh chóng trên Web';
@@ -339,14 +327,12 @@ function setupEventListeners() {
         els.appSubtitleDisplay.innerText = 'Theo dõi chi tiết các file đã phân loại';
       }
 
-      // Close mobile menu on navigate
       if (els.appSidebar && els.appSidebar.classList.contains('open')) {
         els.appSidebar.classList.remove('open');
       }
     });
   });
 
-  // Mobile menu toggle
   if (els.btnMobileMenu && els.appSidebar) {
     els.btnMobileMenu.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -360,7 +346,6 @@ function setupEventListeners() {
     });
   }
 
-  // Filter Categories Search
   if (els.inputSearchCategories) {
     els.inputSearchCategories.addEventListener(
       'input',
@@ -368,7 +353,6 @@ function setupEventListeners() {
     );
   }
 
-  // Source Folder Selector (Web Directory Picker)
   els.btnBrowseSource.addEventListener('click', async () => {
     if (!('showDirectoryPicker' in window)) {
       toastError('Trình duyệt không hỗ trợ chọn thư mục. Vui lòng dùng Chrome / Edge / Brave.');
@@ -378,7 +362,7 @@ function setupEventListeners() {
       const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
       sourceDirHandle = handle;
       settings.sourceDirName = handle.name;
-      await saveHandle('source', handle);   // ← LƯU VÀO IDB
+      await saveHandle('source', handle);
       updateInputs();
       saveSettings(settings);
       toastSuccess(`Đã chọn thư mục nguồn: ${handle.name}`);
@@ -390,7 +374,6 @@ function setupEventListeners() {
     }
   });
 
-  // Destination Folder Selector
   els.btnBrowseDest.addEventListener('click', async () => {
     if (!('showDirectoryPicker' in window)) {
       toastError('Trình duyệt không hỗ trợ chọn thư mục. Vui lòng dùng Chrome / Edge / Brave.');
@@ -400,7 +383,7 @@ function setupEventListeners() {
       const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
       baseDestDirHandle = handle;
       settings.baseDestDirName = handle.name;
-      await saveHandle('dest', handle);   // ← LƯU VÀO IDB
+      await saveHandle('dest', handle);
       updateInputs();
       saveSettings(settings);
       toastSuccess(`Đã chọn thư mục đích: ${handle.name}`);
@@ -412,7 +395,6 @@ function setupEventListeners() {
     }
   });
 
-  // Run Organizer / Pause-Stop unified button
   els.btnRunOrganizer.addEventListener('click', () => {
     if (els.btnRunOrganizer.classList.contains('running')) {
       if (currentAbort) {
@@ -429,10 +411,8 @@ function setupEventListeners() {
     runOrganizer();
   });
 
-  // Undo
   els.btnUndoLastRun.addEventListener('click', handleUndo);
 
-  // Ignore patterns
   els.inputIgnorePatterns?.addEventListener('input', debounce(e => {
     settings.ignorePatterns = e.target.value
       .split('\n')
@@ -441,7 +421,6 @@ function setupEventListeners() {
     saveSettings(settings);
   }, 400));
 
-  // Watch toggle
   els.toggleWatch?.addEventListener('change', async (e) => {
     if (e.target.checked) {
       if (!sourceDirHandle) {
@@ -466,11 +445,9 @@ function setupEventListeners() {
     }
   });
 
-  // Clean dashboard / logs histories
   els.btnClearDashLogs.addEventListener('click', clearHistoryLogs);
   els.btnClearAllLogs.addEventListener('click', clearHistoryLogs);
 
-  // Export configuration
   document.getElementById('btn-export-config')?.addEventListener('click', () => {
     const blob = new Blob([exportSettings(settings)], { type: 'application/json' });
     const a = document.createElement('a');
@@ -481,7 +458,6 @@ function setupEventListeners() {
     toastSuccess('Đã xuất cấu hình');
   });
 
-  // Import configuration
   document.getElementById('btn-import-config')?.addEventListener('click', () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -504,7 +480,6 @@ function setupEventListeners() {
   });
 }
 
-// Clear all execution logs
 async function clearHistoryLogs() {
   const ok = await confirmDialog({
     title: 'Xóa toàn bộ lịch sử?',
@@ -522,11 +497,10 @@ async function clearHistoryLogs() {
   toastSuccess('Đã xóa lịch sử phân loại');
 }
 
-// Add extension to category
 function addExtension(catId, inputEl) {
   const rawExt = inputEl.value.trim().toLowerCase();
   if (!rawExt) return;
-  
+
   const ext = rawExt.startsWith('.') ? rawExt.substring(1) : rawExt;
   if (!ext) return;
 
@@ -543,7 +517,6 @@ function addExtension(catId, inputEl) {
   }
 }
 
-// Remove extension from category
 function removeExtension(catId, ext) {
   const category = settings.categories.find(c => c.id === catId);
   if (category) {
@@ -553,7 +526,6 @@ function removeExtension(catId, ext) {
   }
 }
 
-// Choose custom destination directory for specific category
 async function chooseCustomCategoryPath(catId) {
   if (!('showDirectoryPicker' in window)) {
     toastError('Trình duyệt của bạn không hỗ trợ tính năng này. Vui lòng dùng Chrome / Edge / Brave.');
@@ -578,7 +550,6 @@ async function chooseCustomCategoryPath(catId) {
   }
 }
 
-// Reset category custom path
 async function resetCategoryPath(catId) {
   const category = settings.categories.find(c => c.id === catId);
   if (category) {
@@ -591,7 +562,6 @@ async function resetCategoryPath(catId) {
   }
 }
 
-// Render configuration cards for categories
 function renderCategories(filterQuery = '') {
   els.categoriesListContainer.innerHTML = '';
   const query = filterQuery.trim().toLowerCase();
@@ -613,11 +583,11 @@ function renderCategories(filterQuery = '') {
     `;
     return;
   }
-  
+
   filteredCategories.forEach(cat => {
     const card = document.createElement('div');
     card.className = 'panel category-card';
-    
+
     let pathDisplay = '';
     if (cat.customPathName) {
       pathDisplay = `Custom: ${cat.customPathName}`;
@@ -630,11 +600,10 @@ function renderCategories(filterQuery = '') {
     }
 
     const isCustom = !!cat.customPathName;
-    
+
     const badgesHtml = cat.extensions.map(ext => `
       <span class="ext-badge">
         .${ext}
-        ${cat.id !== 'others' ? `<span class="ext-badge-remove" data-cat="${cat.id}" data-ext="${ext}" title="Xóa đuôi file này">✕</span>` : ''}
       </span>
     `).join('');
 
@@ -652,17 +621,9 @@ function renderCategories(filterQuery = '') {
           </span>
           ${cat.name}
         </h3>
-        <div style="display:flex; gap:6px;">
-          ${cat.id !== 'others' ? `
-            <button class="btn-icon" id="adv-btn-${cat.id}" title="Quy tắc nâng cao">⚙️ Nâng cao</button>
-          ` : ''}
-          ${isCustom ? `
-            <button class="btn btn-small btn-danger" style="padding: 4px 8px; font-size: 0.72rem;" id="reset-path-${cat.id}">Khôi phục</button>
-          ` : ''}
-        </div>
       </div>
-      
-      <div class="category-path-label" id="path-lbl-${cat.id}" title="Nhấp để chỉ định thư mục riêng cho mục này">
+
+      <div class="category-path-label" id="path-lbl-${cat.id}">
         📂 ${pathDisplay}
       </div>
 
@@ -671,63 +632,17 @@ function renderCategories(filterQuery = '') {
         ${badgesHtml || '<span style="color: var(--text-subtle); font-size: 0.78rem;">(Chưa có đuôi file nào)</span>'}
       </div>
 
-      ${cat.id !== 'others' ? `
-        <div class="ext-add-form">
-          <input type="text" placeholder="Thêm đuôi file (vd: pdf, docx)..." class="ext-input" id="ext-input-${cat.id}">
-          <button class="btn btn-primary btn-small" id="ext-btn-${cat.id}">Thêm</button>
-        </div>
-      ` : `
-        <div style="margin-top: auto; font-size: 0.78rem; color: var(--text-muted); text-align: center; padding-top: 8px;">
-          <i>Hạng mục này chứa tất cả các tệp không khớp với các quy tắc trên.</i>
-        </div>
-      `}
+      <div class="category-card-footer">
+        ${cat.id === 'others'
+          ? '<span>Hạng mục này chứa tất cả các tệp không khớp với các quy tắc trên.</span>'
+          : '<span>Quy tắc chuẩn (Chỉ đọc trên Web Demo)</span>'}
+      </div>
     `;
 
     els.categoriesListContainer.appendChild(card);
-
-    if (cat.id !== 'others') {
-      document.getElementById(`adv-btn-${cat.id}`)?.addEventListener('click', async () => {
-        const result = await advancedRulesDialog(cat);
-        if (!result) return;
-        Object.assign(cat, result);
-        saveSettings(settings);
-        renderCategories(els.inputSearchCategories.value);
-        toastSuccess(`Đã lưu quy tắc cho "${cat.name}"`);
-      });
-    }
-
-    document.getElementById(`path-lbl-${cat.id}`).addEventListener('click', () => {
-      chooseCustomCategoryPath(cat.id);
-    });
-
-    if (isCustom) {
-      document.getElementById(`reset-path-${cat.id}`).addEventListener('click', (e) => {
-        e.stopPropagation();
-        resetCategoryPath(cat.id);
-      });
-    }
-
-    if (cat.id !== 'others') {
-      const input = document.getElementById(`ext-input-${cat.id}`);
-      const btn = document.getElementById(`ext-btn-${cat.id}`);
-      
-      btn.addEventListener('click', () => addExtension(cat.id, input));
-      input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') addExtension(cat.id, input);
-      });
-    }
-  });
-
-  document.querySelectorAll('.ext-badge-remove').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const catId = btn.getAttribute('data-cat');
-      const ext = btn.getAttribute('data-ext');
-      removeExtension(catId, ext);
-    });
   });
 }
 
-// Helper: Render empty state markup
 function emptyStateHTML(message = 'Chưa có tập tin nào được xử lý.') {
   return `
     <div class="empty-state">
@@ -737,7 +652,6 @@ function emptyStateHTML(message = 'Chưa có tập tin nào được xử lý.')
   `;
 }
 
-// Render execution logs
 async function renderHistory() {
   const generateHTML = (items) => {
     if (!items.length) return emptyStateHTML('Chưa có tập tin nào được xử lý.');
@@ -788,12 +702,10 @@ async function renderHistory() {
   els.fullActivityList.innerHTML = generateHTML(fullItems);
 }
 
-// Core Web File System Access Organizer Engine
 async function runOrganizer(opts = {}) {
   const { skipPreview = false, silent = false } = opts;
   if (els.btnRunOrganizer.classList.contains('running')) return;
 
-  // 1. Source dir
   if (!sourceDirHandle) {
     toastInfo('Vui lòng chọn thư mục nguồn.');
     try {
@@ -805,7 +717,6 @@ async function runOrganizer(opts = {}) {
     } catch { return; }
   }
 
-  // 2. Permission
   try {
     const opts = { mode: 'readwrite' };
     let perm = await sourceDirHandle.queryPermission(opts);
@@ -820,7 +731,6 @@ async function runOrganizer(opts = {}) {
     return;
   }
 
-  // 3. UI running
   currentAbort = new AbortController();
   els.btnRunOrganizer.classList.add('running');
   els.btnRunOrganizer.classList.remove('stopping');
@@ -834,7 +744,7 @@ async function runOrganizer(opts = {}) {
   els.dashboardOverlay.classList.add('active');
 
   try {
-    // 4. Build plan (dry-run data)
+
     const plan = await buildPlan(sourceDirHandle, settings.categories, {
       baseDestDirHandle,
       customCategoryHandles,
@@ -848,7 +758,6 @@ async function runOrganizer(opts = {}) {
       return;
     }
 
-    // 5. Preview
     if (!skipPreview) {
       const uniqFolders = new Set(plan.map(p => p.category.folderName)).size;
       const summary = `Sẽ di chuyển ${plan.length} tệp vào ${uniqFolders} thư mục.`;
@@ -864,7 +773,6 @@ async function runOrganizer(opts = {}) {
 
     if (currentAbort.signal.aborted) return;
 
-    // 6. Execute
     els.runProgress.hidden = false;
     updateProgress(0, plan.length);
     els.runStatusDesc.innerText = `Đang xử lý 0/${plan.length}...`;
@@ -884,14 +792,14 @@ async function runOrganizer(opts = {}) {
     if (results.length > 0) {
       await addHistory(results);
       if (silent) {
-        // Watch run → GỘP vào lastRun hiện có
+
         const existing = await loadLastRun();
         const merged = existing
           ? { ...existing, moves: [...(existing.moves || []), ...results], timestamp: Date.now() }
           : { timestamp: Date.now(), categories: settings.categories, moves: results };
         await saveLastRun(merged);
       } else {
-        // Manual run → tạo lastRun MỚI
+
         await saveLastRun({
           timestamp: Date.now(),
           categories: settings.categories,
@@ -923,8 +831,6 @@ async function runOrganizer(opts = {}) {
     resetRunUI();
   }
 }
-
-/* ===== Helpers cho run UI ===== */
 
 function resetRunUI() {
   currentAbort = null;
@@ -976,7 +882,6 @@ async function handleUndo() {
   });
   if (!confirmed) return;
 
-  // === Verify handles trước khi chạy ===
   if (!sourceDirHandle) {
     toastError('Cần chọn lại thư mục nguồn trước khi hoàn tác.');
     return;
@@ -999,7 +904,6 @@ async function handleUndo() {
     return;
   }
 
-  // === UI running ===
   currentAbort = new AbortController();
   els.btnUndoLastRun.disabled = true;
   els.btnRunOrganizer.classList.add('running');
@@ -1030,7 +934,6 @@ async function handleUndo() {
     const okRestored = results.filter(r => r.status === 'OK').length;
     const errRestored = results.filter(r => r.status === 'ERROR').length;
 
-    // === Báo cáo chi tiết ===
     if (currentAbort.signal.aborted) {
       toastWarning(`Đã dừng hoàn tác. Đã khôi phục ${okRestored}/${okCount} tệp.`);
     } else if (errRestored > 0) {
@@ -1047,7 +950,6 @@ async function handleUndo() {
       toastSuccess(`Đã khôi phục ${okRestored} tệp`, { title: 'Hoàn tác hoàn tất' });
     }
 
-    // Những move chưa được khôi phục thành công (chưa chạy hoặc lỗi)
     const successfulKeys = new Set(
       results.filter(r => r.status === 'OK').map(r => r.key)
     );
@@ -1078,5 +980,5 @@ async function handleUndo() {
   }
 }
 
-// Start Web application
 document.addEventListener('DOMContentLoaded', init);
+

@@ -1,26 +1,23 @@
-// js/fs-engine.js
 import {
   parseExtension, splitName, fileExists, uniqueFileName,
   getNestedDirectoryHandle
 } from './utils.js';
 import { findCategory, shouldIgnore, needsFileData } from './rules.js';
 
-// js/fs-engine.js — thay thế TEMP_EXTS cũ
 const TEMP_EXTS = new Set([
-  '.crdownload',   // Chrome cũ
-  '.crswap',       // Chrome mới (2022+) ← QUAN TRỌNG
-  '.part',         // Firefox
-  '.partial',      // Edge
-  '.download',     // Safari
-  '.opdownload',   // Opera
+  '.crdownload',
+  '.crswap',
+  '.part',
+  '.partial',
+  '.download',
+  '.opdownload',
   '.lock',
   '.tmp',
-  '.!ut',          // uTorrent
-  '.aria2',        // aria2
-  '.downloading',  // IDM
+  '.!ut',
+  '.aria2',
+  '.downloading',
 ]);
 
-/** File tạm downloader — bỏ qua hoàn toàn */
 function isTempFile(fileName) {
   const lower = fileName.toLowerCase();
   for (const ext of TEMP_EXTS) {
@@ -29,7 +26,6 @@ function isTempFile(fileName) {
   return false;
 }
 
-/** Move với retry khi file bị lock */
 async function moveWithRetry(entry, destHandle, finalName, maxRetries = 3) {
   let lastErr;
   for (let i = 0; i < maxRetries; i++) {
@@ -39,31 +35,26 @@ async function moveWithRetry(entry, destHandle, finalName, maxRetries = 3) {
     } catch (e) {
       lastErr = e;
       const msg = (e.message || '').toLowerCase();
-      // Chỉ retry khi là lỗi lock / đang được dùng
+
       const isRetryable = msg.includes('locked')
                        || msg.includes('in use')
                        || msg.includes('being used');
       if (!isRetryable || i === maxRetries - 1) throw e;
-      // Delay tăng dần: 500ms, 1000ms
+
       await new Promise(r => setTimeout(r, 500 * (i + 1)));
     }
   }
   throw lastErr;
 }
 
-/** Match 1 file vào category (fallback util) */
 export function matchCategory(fileName, categories) {
   return findCategory({ name: fileName }, categories);
 }
 
-/**
- * Quét source dir + build plan. Tên unique được RESERVE ngay ở bước này
- * để tránh race condition khi execute song song.
- */
 export async function buildPlan(sourceDirHandle, categories, ctx = {}, onProgress) {
   const plan = [];
-  const handleCache = new Map();       // folderPath → destHandle
-  const nameReservations = new Map();  // folderPath → Set<name>
+  const handleCache = new Map();
+  const nameReservations = new Map();
   let scanned = 0;
   const needData = categories.some(needsFileData);
 
@@ -92,10 +83,8 @@ export async function buildPlan(sourceDirHandle, categories, ctx = {}, onProgres
       ? fileName.substring(fileName.lastIndexOf('.')).toLowerCase()
       : '';
 
-    // 1. Kiểm tra ignore patterns
     if (shouldIgnore(fileName, ctx.ignorePatterns)) continue;
 
-    // 2. Đọc metadata file nếu có rule nâng cao cần size hoặc age
     let fileObj = { name: fileName };
     if (needData) {
       try {
@@ -110,13 +99,11 @@ export async function buildPlan(sourceDirHandle, categories, ctx = {}, onProgres
       }
     }
 
-    // 3. Phân loại bằng rules nâng cao (theo priority)
     const category = findCategory(fileObj, categories);
     if (!category) continue;
 
     const destHandle = await getDestHandle(category);
 
-    // Reserve unique name tránh collision
     const resKey = category.folderName + '::' + category.id;
     if (!nameReservations.has(resKey)) nameReservations.set(resKey, new Set());
     const reserved = nameReservations.get(resKey);
@@ -141,9 +128,6 @@ export async function buildPlan(sourceDirHandle, categories, ctx = {}, onProgres
   return plan;
 }
 
-/**
- * Thực thi plan với concurrency + abort
- */
 export async function executePlan(plan, sourceDirHandle, {
   onProgress, onFileDone, signal, concurrency = 4
 } = {}) {
@@ -217,9 +201,6 @@ export async function executePlan(plan, sourceDirHandle, {
   return results;
 }
 
-/**
- * Undo — khôi phục tất cả tệp OK về thư mục nguồn
- */
 export async function undoLastRun(lastRun, ctx, { onProgress, signal, concurrency = 4 } = {}) {
   const moves = (lastRun.moves || []).filter(m => m.status === 'OK');
   const results = [];
@@ -233,7 +214,7 @@ export async function undoLastRun(lastRun, ctx, { onProgress, signal, concurrenc
       const move = queue.shift();
       const key = `${move.folderName}/${move.name}`;
       try {
-        // Xác định handle nơi file đang nằm
+
         let srcHandle;
         if (ctx.customCategoryHandles[move.categoryId]) {
           srcHandle = ctx.customCategoryHandles[move.categoryId];
@@ -246,14 +227,12 @@ export async function undoLastRun(lastRun, ctx, { onProgress, signal, concurrenc
         const fileHandle = await srcHandle.getFileHandle(move.name);
         const fileData = await fileHandle.getFile();
 
-        // Ghi về source với tên gốc
         const targetName = await uniqueFileName(ctx.sourceDirHandle, move.originalName);
         const target = await ctx.sourceDirHandle.getFileHandle(targetName, { create: true });
         const w = await target.createWritable();
         await w.write(fileData);
         await w.close();
 
-        // Xóa bản ở dest
         await srcHandle.removeEntry(move.name);
 
         results.push({ status: 'OK', key, name: move.name, restored: targetName });
@@ -269,3 +248,4 @@ export async function undoLastRun(lastRun, ctx, { onProgress, signal, concurrenc
   await Promise.all(Array(n).fill().map(worker));
   return results;
 }
+

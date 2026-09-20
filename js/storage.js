@@ -1,4 +1,3 @@
-// js/storage.js
 import { normalizeCategory } from './rules.js';
 
 const DB_NAME = 'sorter_io';
@@ -16,7 +15,7 @@ function openDB() {
         req.onupgradeneeded = () => {
             const db = req.result;
             if (!db.objectStoreNames.contains(STORE_HANDLES)) {
-                db.createObjectStore(STORE_HANDLES); // key-value: "source" → handle
+                db.createObjectStore(STORE_HANDLES);
             }
             if (!db.objectStoreNames.contains(STORE_HISTORY)) {
                 const store = db.createObjectStore(STORE_HISTORY, {
@@ -39,8 +38,6 @@ async function getStore(name, mode = 'readonly') {
     const db = await openDB();
     return db.transaction(name, mode).objectStore(name);
 }
-
-/* ============ HANDLES ============ */
 
 export async function saveHandle(key, handle) {
     const store = await getStore(STORE_HANDLES, 'readwrite');
@@ -68,8 +65,6 @@ export async function clearHandle(key) {
         req.onerror = () => rej(req.error);
     });
 }
-
-/* ============ HISTORY ============ */
 
 export async function addHistory(items) {
     if (!items || !items.length) return;
@@ -121,8 +116,6 @@ export async function clearHistory() {
     });
 }
 
-/* ============ SETTINGS (localStorage vì nhỏ) ============ */
-
 const SETTINGS_KEY = 'sorter_web_settings_v2';
 
 export function loadSettings(defaults) {
@@ -134,11 +127,7 @@ export function loadSettings(defaults) {
             ...defaults,
             ...parsed,
             ignorePatterns: parsed.ignorePatterns || defaults.ignorePatterns || [],
-            categories: defaults.categories.map(cat => {
-                const saved = (parsed.categories || []).find(c => c.id === cat.id);
-                const merged = saved ? { ...cat, ...saved } : cat;
-                return normalizeCategory(merged);
-            })
+            categories: defaults.categories.map(cat => normalizeCategory(cat))
         };
     } catch (e) {
         console.warn('Load settings failed:', e);
@@ -148,8 +137,8 @@ export function loadSettings(defaults) {
 
 export function saveSettings(s) {
     try {
-        // Chỉ lưu categories + tên dir, KHÔNG lưu history (đã ở IndexedDB)
-        const { history, ...rest } = s;
+
+        const { history, categories, ...rest } = s;
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(rest));
     } catch (e) {
         console.warn('Save settings failed:', e);
@@ -179,10 +168,8 @@ export function importSettings(s, jsonText) {
     };
 }
 
-/* ============ LAST RUN (cho Undo) ============ */
-
 export async function saveLastRun(data) {
-    // Cap 2000 moves gần nhất để không phình DB
+
     if (data.moves && data.moves.length > 2000) {
         data = { ...data, moves: data.moves.slice(-2000) };
     }

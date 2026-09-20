@@ -11,7 +11,7 @@
 
 <body>
   <div class="app-container">
-    <!-- Sidebar Navigation -->
+
     <aside class="sidebar" id="app-sidebar">
       <div class="logo-container">
         <div class="logo-icon">
@@ -55,9 +55,8 @@
       </div>
     </aside>
 
-    <!-- Main Content Panel -->
     <main class="main-content">
-      <!-- App Header -->
+
       <header class="header">
         <div class="header-left">
           <button class="mobile-menu-btn" id="btn-mobile-menu" aria-label="Toggle menu">
@@ -71,6 +70,14 @@
           </div>
         </div>
         <div class="header-actions">
+          <a href="https://github.com/ngoducmanh-nrd/sorter-io/releases/" target="_blank" rel="noopener noreferrer" class="btn-download-exe" id="btn-download-exe" title="Tải bản chính thức (.exe) trên GitHub Releases">
+            <span>Tải bản chính thức</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </a>
           <div class="status-pill">
             <span class="status-dot status-idle" id="status-dot"></span>
             <span id="status-text">Sẵn Sàng</span>
@@ -78,9 +85,8 @@
         </div>
       </header>
 
-      <!-- PAGE: DASHBOARD -->
       <section id="page-dashboard" class="page-view active">
-        <!-- Quick Stats Grid -->
+
         <div class="stats-grid">
           <div class="panel stat-card stat-card-success">
             <div class="stat-info">
@@ -120,9 +126,9 @@
         </div>
 
         <div class="dashboard-grid">
-          <!-- Folder Path Settings Panel -->
+
           <div class="panel" style="position: relative;">
-            <!-- Running Overlay -->
+
             <div class="running-overlay" id="dashboard-overlay">
               <div class="spinner"></div>
               <div class="running-overlay-text">Đang phân loại tệp tin...</div>
@@ -178,7 +184,6 @@
             </div>
           </div>
 
-          <!-- Big Action Panel -->
           <div class="panel run-panel">
             <div style="display:flex; align-items:center; justify-content:space-between; width:100%; margin-bottom:12px;">
               <h2 class="panel-title" style="margin-bottom: 0;">Khởi Chạy</h2>
@@ -208,7 +213,6 @@
           </div>
         </div>
 
-        <!-- Recent Activity Logs Panel -->
         <div class="panel activity-panel">
           <div class="activity-header">
             <h2 class="panel-title" style="margin-bottom: 0;">
@@ -232,7 +236,7 @@
             </div>
           </div>
           <div class="activity-list" id="dash-activity-list">
-            <!-- Dynamic items go here -->
+
             <div class="empty-state">
               <svg viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="10" />
@@ -245,13 +249,14 @@
         </div>
       </section>
 
-      <!-- PAGE: CATEGORIES CONFIG -->
       <section id="page-categories" class="page-view">
         <div class="rules-toolbar">
           <div>
-            <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main);">Quản lý quy tắc phân loại</h2>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Thiết lập định dạng đuôi tệp tin
-              và vị trí lưu trữ cụ thể cho từng mục phân loại.</p>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main);">Quy tắc phân loại</h2>
+              <span class="badge-readonly">Chế độ xem mẫu (Chỉ đọc)</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Danh sách các quy tắc phân loại mặc định trên bản Web Demo.</p>
           </div>
           <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <div class="search-box-wrapper">
@@ -263,18 +268,16 @@
                 placeholder="Tìm kiếm danh mục, đuôi file...">
             </div>
             <div style="display:flex; gap:8px;">
-              <button class="btn btn-small" id="btn-export-config">Xuất cấu hình</button>
-              <button class="btn btn-small" id="btn-import-config">Nhập cấu hình</button>
+              <button class="btn btn-small" id="btn-export-config">Xuất cấu hình mẫu</button>
             </div>
           </div>
         </div>
 
         <div class="categories-container" id="categories-list-container">
-          <!-- Dynamic category cards go here -->
+
         </div>
       </section>
 
-      <!-- PAGE: HISTORY LOGS -->
       <section id="page-logs" class="page-view">
         <div class="panel" style="display: flex; flex-direction: column; min-height: 400px;">
           <div class="activity-header">
@@ -294,7 +297,7 @@
             </button>
           </div>
           <div class="activity-list" id="full-activity-list">
-            <!-- Full logs list -->
+
             <div class="empty-state">
               <svg viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="10" />

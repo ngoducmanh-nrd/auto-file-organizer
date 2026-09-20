@@ -1,8 +1,3 @@
-// js/modal.js
-
-/**
- * Custom confirm dialog, trả về Promise<boolean>
- */
 export function confirmDialog({
     title = 'Xác nhận',
     message = '',
@@ -45,12 +40,10 @@ export function confirmDialog({
             else if (act === 'cancel' || e.target === backdrop) close(false);
         });
 
-        // Focus nút OK
         requestAnimationFrame(() => backdrop.querySelector('[data-act="ok"]')?.focus());
     });
 }
 
-/** Prompt dialog, trả về Promise<string|null> */
 export function promptDialog({
     title = 'Nhập giá trị',
     message = '',
@@ -102,7 +95,6 @@ export function promptDialog({
     });
 }
 
-/** Modal xem trước danh sách file sẽ di chuyển */
 export function previewDialog({ items, summary, maxDisplay = 200 } = {}) {
   return new Promise(resolve => {
     const backdrop = document.createElement('div');
@@ -160,7 +152,6 @@ export function previewDialog({ items, summary, maxDisplay = 200 } = {}) {
   });
 }
 
-/** Modal cấu hình rules nâng cao cho 1 category */
 export function advancedRulesDialog(category) {
   return new Promise(resolve => {
     const adv = category.advanced || {};
